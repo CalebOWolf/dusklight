@@ -571,6 +571,7 @@ if (DUSK_ENABLE_CODE_MODS AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
     add_subdirectory(mods/shadow_mod)
     add_subdirectory(mods/window_demo)
     add_subdirectory(mods/flow_demo)
+    add_subdirectory(mods/custom_actor_demo)
     add_subdirectory(mods/cosmetics)
     add_subdirectory(mods/randomizer)
 endif ()

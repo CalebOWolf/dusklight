@@ -1136,6 +1136,82 @@ svc_game_mode->register_game_mode(mod_ctx, &gameModeDesc);
 
 ```
 
+### ActorService (`mods/svc/actor.h`)
+
+A service that manages registering and creating custom actors. These actors will be run by the game as if they are part of the engine. These actors can be created by the game either by its 16-bit actor name, or a 7-character long name that can
+be loaded by a stage.
+
+```cpp
+#include "mods/svc/actor.h"
+IMPORT_SERVICE(ActorService, svc_actor);
+
+class myActor_c : public fopAc_ac_c {};
+
+int myActor_Create(void* i_this) {
+    // Ran several times, until it returns cPhs_COMPLEATE_e to allow for async loading
+    return cPhs_COMPLEATE_e;
+}
+
+int myActor_Delete(void* i_this) {
+    // Free resources here
+    return 1;
+}
+
+int myActor_Execute(void* i_this) {
+    // Ran once per game tick
+    return 1;
+}
+
+int myActor_IsDelete(void* i_this) {
+    // Returns 1 when the actor can be deleted
+    return 1;
+}
+
+int myActor_Draw(void* i_this) {
+    // Code to draw the actor
+    return 1;
+}
+
+s16 actor_name; // The process name that can be used by the game to load the actor
+ActorHandle actor_handle;
+ActorProfileDesc profDesc = {
+    .name = "AUnique", // The name used by the stage loader to load the actor with.
+                       // It has a character limit of 7 and must be unique among active
+                       // mod actors. Matching a game actor name overrides stage lookup.
+    .priority_group = 7, // When, relative to other actors _Execute should run
+                         // See: mods/svc/actor.h
+    .process_size = sizeof(myActor_c),
+    .draw_priority = fpcDwPi_OBJ_LBOX_e, // Defines when the actor should be drawn relative
+                                         // to other actors (see f_pc_draw_priority.h)
+    .status = fopAcStts_CULL_e  | fopAcStts_UNK_0x4000_e | fopAcStts_UNK_0x40000_e,
+    .group = fopAc_ACTOR_e, // Can be fopAc_ACTOR_e, fopAc_PLAYER_e, fopAc_ENEMY_e, or fopAc_NPC_e
+    .cull_type = fopAc_CULLBOX_CUSTOM_e,
+    .create_function = myActor_Create,
+    .delete_function = myActor_Delete,
+    .execute_function = myActor_Execute,
+    .is_delete_function = myActor_IsDelete,
+    .draw_function = myActor_Draw,
+};
+svc_actor->register_actor(mod_ctx, &profDesc, &actor_name, &actor_handle);
+
+// Spawn the actor at the player's position
+fopAc_ac_c* plr = dComIfGp_getPlayer(0);
+if (plr) {
+    ActorSpawnParams spawnParams = {
+        .parameters = 0,
+        .argument = 0,
+        .room_num = fopAcM_GetRoomNo(plr),
+        .position = {plr->current.pos.x, plr->current.pos.y, plr->current.pos.z},
+        .angle = {plr->current.angle.x, plr->current.angle.y, plr->current.angle.z},
+        .scale = {1.0f, 1.0f, 1.0f}
+    };
+    ActorId created_actor_id;
+    svc_actor->create_actor(mod_ctx, actor_name, &spawnParams, &created_actor_id);
+}
+```
+
+See `mods/custom_actor_demo` for a more complete example.
+
 ---
 
 ## Hooking Game Functions
